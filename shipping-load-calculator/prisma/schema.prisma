@@ -1,0 +1,60 @@
+// In prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model GuestUsage {
+  mobileNumber          String   @id @unique
+  calculationPerformedAt DateTime // Stores the timestamp of the last successful calculation
+}
+
+model LeadLog {
+  id                  String    @id @default(cuid())
+  mobileNumber        String
+  attemptedAt         DateTime  @default(now())
+  otpVerifiedAt       DateTime?
+  otpVerified         Boolean   @default(false)
+  calculationAllowed  Boolean   @default(false)
+  calculationAttemptedAt DateTime?
+  reportId            String?   @unique
+  report              Report?   @relation("LeadReport", fields: [reportId], references: [id])
+  notes               String?
+
+  @@index([mobileNumber])
+  @@index([attemptedAt])
+}
+
+model Report {
+  id                String    @id @default(cuid())
+  userId            String?
+  user              User?     @relation(fields: [userId], references: [id])
+  guestMobileNumber String?
+  items             Json
+  result            Json
+  createdAt         DateTime  @default(now())
+  leadLog           LeadLog?  @relation("LeadReport") // Corrected relation
+
+  @@index([userId])
+  @@index([guestMobileNumber])
+}
+
+model User {
+  id                String    @id @default(cuid())
+  name              String?
+  companyName       String?
+  mobile            String?   @unique
+  email             String    @unique
+  passwordHash      String
+  subscriptionPlan  String    @default("free")
+  usageCount        Int       @default(0)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  reports           Report[]
+  paymentGatewayCustomerId String? @unique
+}
